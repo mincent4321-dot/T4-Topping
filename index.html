@@ -113,9 +113,35 @@
   .gitem .gform{color:var(--teal); font-weight:600;}
   mark{background:#ffe9a8; font-weight:800; padding:0 4px; border-radius:4px; color:#5b3a29;}
   body.mobile .gitem{font-size:16.5px; padding:9px 0 9px 12px;}
+  /* login + account admin */
+  body.auth-locked header, body.auth-locked nav, body.auth-locked main{display:none;}
+  #login-screen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:22px; background:linear-gradient(135deg,#fdf6ec,#eef7f5);}
+  body:not(.auth-locked) #login-screen{display:none;}
+  .login-box{width:100%; max-width:390px; background:#fff; border:1px solid var(--line); border-radius:14px; padding:22px; box-shadow:0 10px 30px rgba(90,60,30,.12);}
+  .login-box h2{margin-top:0; font-size:24px;}
+  .field{margin-bottom:12px; text-align:left;}
+  .field label{display:block; font-size:13px; color:var(--muted); font-weight:800; margin-bottom:5px;}
+  .field input{width:100%; padding:12px 13px; border:2px solid var(--line); border-radius:10px; font:inherit; font-size:16px;}
+  .field input:focus{outline:none; border-color:var(--teal);}
+  .login-msg{min-height:20px; color:var(--red); font-weight:700; font-size:14px; margin:6px 0 10px;}
+  .login-actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .mini-btn{border:1.5px solid var(--line); background:#fff; color:var(--muted); border-radius:10px; padding:8px 11px; font-weight:700; cursor:pointer;}
+  .userbar{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:13px;}
+  .userbar button{background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.35); color:#fff; border-radius:10px; padding:6px 10px; font-size:13px; cursor:pointer;}
+  .admin-tools{display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end; margin-bottom:14px;}
+  .admin-tools .field{margin:0;}
+  .small-muted{color:var(--muted); font-size:13.5px;}
+  .role-badge{display:inline-block; border-radius:8px; padding:3px 8px; font-size:12.5px; font-weight:800; background:#eef7f5; color:var(--teal);}
+  .danger{color:var(--red); border-color:#f0c9c9;}
+  #tab-accounts{display:none;}
+  body.admin #tab-accounts{display:block;}
   /* ============ MOBILE LAYOUT (body.mobile or small screens) ============ */
   #layout-btn{margin-left:auto; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.35); color:#fff; border-radius:10px; padding:6px 10px; font-size:14px; cursor:pointer;}
+  body:not(.admin) #layout-btn{margin-left:0;}
   body.mobile header .sub{display:none;}
+  body.mobile .userbar{width:100%; justify-content:flex-end; flex-wrap:wrap;}
+  body.mobile header{flex-wrap:wrap;}
+  body.mobile .admin-tools{grid-template-columns:1fr;}
   body.mobile main{max-width:480px; padding:12px 10px 70px;}
   body.mobile nav button{font-size:13.5px; padding:12px 2px;}
   body.mobile .drink-row{flex-direction:column; gap:6px;}
@@ -145,15 +171,43 @@
     .tf button{padding:20px; font-size:21px;}
     .flash-controls .btn{flex:1; padding:14px 8px;}
     .qtext{font-size:20px;}
+    .admin-tools{grid-template-columns:1fr;}
+    header{flex-wrap:wrap;}
+    .userbar{width:100%; justify-content:flex-end; flex-wrap:wrap;}
   }
 </style>
 </head>
-<body>
+<body class="auth-locked">
+<div id="login-screen">
+  <div class="login-box">
+    <h2>Login</h2>
+    <p class="hint">請先登入才能使用 T4 Topping Trainer。</p>
+    <div class="field">
+      <label for="login-user">User name</label>
+      <input id="login-user" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="login-pass">Password</label>
+      <input id="login-pass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter') login()">
+    </div>
+    <div class="login-msg" id="login-msg"></div>
+    <div class="login-actions">
+      <button class="btn btn-p" onclick="login()">Login</button>
+      <button class="mini-btn" onclick="connectAccountFolder()">Connect folder</button>
+    </div>
+    <p class="hint" id="vault-status">Encrypted account vault: browser storage</p>
+    <p class="small-muted">Default admin: <b>admin</b> / <b>T4admin2026!</b></p>
+  </div>
+</div>
 <header>
   <span class="logo">🧋</span>
   <h1>T4 Topping Trainer</h1>
   <div class="sub">T4清茶達人 · v3.5<br>Updated 9/7/26 · Menu 16/1/26</div>
   <button id="layout-btn" onclick="toggleLayout()" title="Switch layout">📱 Mobile</button>
+  <div class="userbar">
+    <span id="current-user"></span>
+    <button onclick="logout()">Logout</button>
+  </div>
 </header>
 <nav>
   <button id="tab-learn" class="active" onclick="showTab('learn')">📖 Learn</button>
@@ -161,6 +215,7 @@
   <button id="tab-practice" onclick="showTab('practice')">✏️ Practice</button>
   <button id="tab-test" onclick="showTab('test')">✅ Test</button>
   <button id="tab-ref" onclick="showTab('ref')">🥄 Spoons</button>
+  <button id="tab-accounts" onclick="showTab('accounts')">👤 Accounts</button>
 </nav>
 <main>
   <!-- LEARN -->
@@ -286,6 +341,46 @@
       <table>
         <tr><th>Topping</th><th>Weight</th><th>Spoons</th></tr>
         <tbody id="ref-table"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ACCOUNTS -->
+  <section id="view-accounts" class="hide">
+    <h2>Account Management</h2>
+    <p class="hint">Admin only. Accounts are saved in an encrypted vault named <b>t4-users.enc</b> when a folder is connected.</p>
+    <p class="hint">Login count is recorded automatically. IP is shown when provided by a server or URL parameter, for example <b>?clientIp=192.168.1.20</b>; plain offline HTML cannot read a user's real IP by itself.</p>
+    <div class="card">
+      <h2 style="margin-top:0">Change admin password</h2>
+      <div class="admin-tools">
+        <div class="field">
+          <label for="admin-old-pass">Current password</label>
+          <input id="admin-old-pass" type="password" autocomplete="current-password">
+        </div>
+        <div class="field">
+          <label for="admin-new-pass">New password</label>
+          <input id="admin-new-pass" type="password" autocomplete="new-password">
+        </div>
+        <button class="btn btn-p" onclick="changeAdminPassword()">Update</button>
+      </div>
+      <hr style="border:none; border-top:1px solid var(--line); margin:16px 0">
+      <h2 style="margin-top:0">Add user</h2>
+      <div class="admin-tools">
+        <div class="field">
+          <label for="new-user">New user name</label>
+          <input id="new-user" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="new-pass">Password</label>
+          <input id="new-pass" type="password" autocomplete="new-password">
+        </div>
+        <button class="btn btn-p" onclick="addAccount()">Add</button>
+      </div>
+      <div class="login-msg" id="acct-msg"></div>
+      <p class="small-muted" id="acct-store-status"></p>
+      <table>
+        <thead><tr><th>User name</th><th>Role</th><th>Logins</th><th>Last IP</th><th>Last login</th><th>Action</th></tr></thead>
+        <tbody id="accounts-table"></tbody>
       </table>
     </div>
   </section>
@@ -471,9 +566,270 @@ const store={
  write(k,v){ try{localStorage.setItem(k,v);}catch(e){mem[k]=v;} }
 };
 
+/* ================= AUTH + ENCRYPTED ACCOUNT VAULT ================= */
+const AUTH_STORE_KEY="t4UserVaultEncryptedV1";
+const AUTH_FILE_NAME="t4-users.enc";
+const VAULT_SECRET="T4 Topping Trainer account vault v1";
+const DEFAULT_ADMIN_USER="admin";
+const DEFAULT_ADMIN_PASS="T4admin2026!";
+let accountVault={version:1,users:[]};
+let currentUser=null;
+let accountDirHandle=null;
+
+const enc=new TextEncoder();
+const dec=new TextDecoder();
+const b64=a=>btoa(String.fromCharCode(...new Uint8Array(a)));
+const fromB64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+function randomB64(bytes=16){
+  const a=new Uint8Array(bytes);
+  crypto.getRandomValues(a);
+  return b64(a);
+}
+async function deriveBits(text,salt,uses){
+  const key=await crypto.subtle.importKey("raw",enc.encode(text),"PBKDF2",false,["deriveBits","deriveKey"]);
+  if(uses==="key"){
+    return crypto.subtle.deriveKey(
+      {name:"PBKDF2",salt:fromB64(salt),iterations:120000,hash:"SHA-256"},
+      key,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]
+    );
+  }
+  return crypto.subtle.deriveBits(
+    {name:"PBKDF2",salt:fromB64(salt),iterations:120000,hash:"SHA-256"},
+    key,256
+  );
+}
+async function hashPassword(password,salt=randomB64()){
+  return {salt,hash:b64(await deriveBits(password,salt,"bits"))};
+}
+async function makeUser(username,password,role="user"){
+  const hp=await hashPassword(password);
+  return {username,role,salt:hp.salt,hash:hp.hash,createdAt:new Date().toISOString(),loginCount:0,lastLoginAt:"",lastLoginIp:""};
+}
+async function passwordOK(user,password){
+  const hp=await hashPassword(password,user.salt);
+  return hp.hash===user.hash;
+}
+function normalizeUserStats(){
+  accountVault.users.forEach(u=>{
+    if(typeof u.loginCount!=="number") u.loginCount=0;
+    if(!("lastLoginAt" in u)) u.lastLoginAt="";
+    if(!("lastLoginIp" in u)) u.lastLoginIp="";
+  });
+}
+function currentClientIp(){
+  const qs=new URLSearchParams(location.search);
+  return window.T4_CLIENT_IP||qs.get("clientIp")||qs.get("ip")||"Not available";
+}
+function formatLoginTime(iso){
+  if(!iso) return "—";
+  const d=new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
+}
+async function vaultKey(salt){
+  return deriveBits(VAULT_SECRET,salt,"key");
+}
+async function encryptVault(data){
+  const salt=randomB64(16), iv=randomB64(12);
+  const key=await vaultKey(salt);
+  const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv:fromB64(iv)},key,enc.encode(JSON.stringify(data)));
+  return JSON.stringify({type:"t4-users",version:1,salt,iv,data:b64(cipher)});
+}
+async function decryptVault(raw){
+  const box=JSON.parse(raw);
+  if(!box||box.type!=="t4-users") throw new Error("Invalid account vault");
+  const key=await vaultKey(box.salt);
+  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:fromB64(box.iv)},key,fromB64(box.data));
+  return JSON.parse(dec.decode(plain));
+}
+async function saveAccountVault(){
+  const encrypted=await encryptVault(accountVault);
+  store.write(AUTH_STORE_KEY,encrypted);
+  if(accountDirHandle){
+    const fileHandle=await accountDirHandle.getFileHandle(AUTH_FILE_NAME,{create:true});
+    const writer=await fileHandle.createWritable();
+    await writer.write(encrypted);
+    await writer.close();
+  }
+  updateVaultStatus();
+}
+async function loadAccountVault(raw){
+  if(raw){
+    try{
+      accountVault=await decryptVault(raw);
+      if(!Array.isArray(accountVault.users)) accountVault.users=[];
+      normalizeUserStats();
+    }catch(e){
+      accountVault={version:1,users:[]};
+      setLoginMessage("Account vault could not be opened.");
+    }
+  }
+  if(!accountVault.users.some(u=>u.username===DEFAULT_ADMIN_USER)){
+    accountVault.users.push(await makeUser(DEFAULT_ADMIN_USER,DEFAULT_ADMIN_PASS,"admin"));
+    await saveAccountVault();
+  }
+  normalizeUserStats();
+}
+function setLoginMessage(msg){ document.getElementById("login-msg").textContent=msg||""; }
+function setAccountMessage(msg,isOK){
+  const el=document.getElementById("acct-msg");
+  el.style.color=isOK?"var(--green)":"var(--red)";
+  el.textContent=msg||"";
+}
+function updateVaultStatus(){
+  const txt=accountDirHandle?`Encrypted account vault: ${AUTH_FILE_NAME}`:"Encrypted account vault: browser storage";
+  const loginStatus=document.getElementById("vault-status");
+  if(loginStatus) loginStatus.textContent=txt;
+  const acctStatus=document.getElementById("acct-store-status");
+  if(acctStatus) acctStatus.textContent=txt;
+}
+async function connectAccountFolder(){
+  if(!window.showDirectoryPicker){
+    setLoginMessage("This browser cannot save directly to a folder. Browser storage will be used.");
+    return;
+  }
+  try{
+    accountDirHandle=await window.showDirectoryPicker({mode:"readwrite"});
+    try{
+      const fileHandle=await accountDirHandle.getFileHandle(AUTH_FILE_NAME);
+      const file=await fileHandle.getFile();
+      await loadAccountVault(await file.text());
+      store.write(AUTH_STORE_KEY,await encryptVault(accountVault));
+    }catch(e){
+      await saveAccountVault();
+    }
+    updateVaultStatus();
+    renderAccounts();
+    setLoginMessage("");
+    setAccountMessage("Encrypted account file connected.",true);
+  }catch(e){
+    setLoginMessage("Folder connection cancelled.");
+  }
+}
+async function login(){
+  const username=document.getElementById("login-user").value.trim();
+  const password=document.getElementById("login-pass").value;
+  const user=accountVault.users.find(u=>u.username===username);
+  if(!user||!(await passwordOK(user,password))){
+    setLoginMessage("User name or password is incorrect.");
+    return;
+  }
+  user.loginCount=(user.loginCount||0)+1;
+  user.lastLoginAt=new Date().toISOString();
+  user.lastLoginIp=currentClientIp();
+  await saveAccountVault();
+  currentUser={username:user.username,role:user.role};
+  store.write("t4CurrentUser",JSON.stringify(currentUser));
+  document.body.classList.remove("auth-locked");
+  document.body.classList.toggle("admin",currentUser.role==="admin");
+  document.getElementById("current-user").textContent=`${currentUser.username}${currentUser.role==="admin"?" · admin":""}`;
+  setLoginMessage("");
+  renderAccounts();
+  showTab("learn");
+}
+function logout(){
+  currentUser=null;
+  store.write("t4CurrentUser","");
+  document.body.classList.add("auth-locked");
+  document.body.classList.remove("admin");
+  document.getElementById("login-pass").value="";
+  showTab("learn");
+}
+function renderAccounts(){
+  const tbody=document.getElementById("accounts-table");
+  if(!tbody) return;
+  tbody.innerHTML=accountVault.users.map(u=>`
+    <tr>
+      <td>${esc(u.username)}</td>
+      <td><span class="role-badge">${esc(u.role)}</span></td>
+      <td>${u.loginCount||0}</td>
+      <td>${esc(u.lastLoginIp||"—")}</td>
+      <td>${esc(formatLoginTime(u.lastLoginAt))}</td>
+      <td>${u.role==="admin"?"—":`<button class="mini-btn danger" onclick="deleteAccount('${esc(u.username)}')">Delete</button>`}</td>
+    </tr>`).join("");
+  updateVaultStatus();
+}
+async function addAccount(){
+  if(!currentUser||currentUser.role!=="admin") return;
+  const username=document.getElementById("new-user").value.trim();
+  const password=document.getElementById("new-pass").value;
+  if(!/^[A-Za-z0-9._-]{3,30}$/.test(username)){
+    setAccountMessage("User name must be 3-30 letters, numbers, dots, underscores, or hyphens.");
+    return;
+  }
+  if(password.length<6){
+    setAccountMessage("Password must be at least 6 characters.");
+    return;
+  }
+  if(accountVault.users.some(u=>u.username.toLowerCase()===username.toLowerCase())){
+    setAccountMessage("That user name already exists.");
+    return;
+  }
+  accountVault.users.push(await makeUser(username,password,"user"));
+  await saveAccountVault();
+  document.getElementById("new-user").value="";
+  document.getElementById("new-pass").value="";
+  renderAccounts();
+  setAccountMessage("Account added and encrypted vault saved.",true);
+}
+async function changeAdminPassword(){
+  if(!currentUser||currentUser.role!=="admin") return;
+  const oldPass=document.getElementById("admin-old-pass").value;
+  const newPass=document.getElementById("admin-new-pass").value;
+  const admin=accountVault.users.find(u=>u.username===currentUser.username&&u.role==="admin");
+  if(!admin){
+    setAccountMessage("Current admin account was not found.");
+    return;
+  }
+  if(!(await passwordOK(admin,oldPass))){
+    setAccountMessage("Current password is incorrect.");
+    return;
+  }
+  if(newPass.length<6){
+    setAccountMessage("New password must be at least 6 characters.");
+    return;
+  }
+  if(newPass===oldPass){
+    setAccountMessage("New password must be different from the current password.");
+    return;
+  }
+  const hp=await hashPassword(newPass);
+  admin.salt=hp.salt;
+  admin.hash=hp.hash;
+  admin.updatedAt=new Date().toISOString();
+  await saveAccountVault();
+  document.getElementById("admin-old-pass").value="";
+  document.getElementById("admin-new-pass").value="";
+  setAccountMessage("Admin password updated and encrypted vault saved.",true);
+}
+async function deleteAccount(username){
+  if(!currentUser||currentUser.role!=="admin") return;
+  if(!confirm("Delete account: "+username+"?")) return;
+  accountVault.users=accountVault.users.filter(u=>u.username!==username||u.role==="admin");
+  await saveAccountVault();
+  renderAccounts();
+  setAccountMessage("Account deleted and encrypted vault saved.",true);
+}
+async function initAuth(){
+  if(!window.crypto||!crypto.subtle){
+    setLoginMessage("Secure crypto is not available in this browser.");
+    return;
+  }
+  let raw=store.read(AUTH_STORE_KEY);
+  if(!raw){
+    try{
+      const res=await fetch(AUTH_FILE_NAME,{cache:"no-store"});
+      if(res.ok) raw=await res.text();
+    }catch(e){}
+  }
+  await loadAccountVault(raw);
+  updateVaultStatus();
+}
+
 /* ================= TABS ================= */
 function showTab(t){
-  ["learn","game","practice","test","ref"].forEach(x=>{
+  if(t==="accounts"&&(!currentUser||currentUser.role!=="admin")) t="learn";
+  ["learn","game","practice","test","ref","accounts"].forEach(x=>{
     document.getElementById("view-"+x).classList.toggle("hide",x!==t);
     document.getElementById("tab-"+x).classList.toggle("active",x===t);
   });
@@ -926,6 +1282,7 @@ function applyLayout(mobile){
 function toggleLayout(){ applyLayout(!document.body.classList.contains("mobile")); }
 
 /* init */
+initAuth();
 renderLearn();
 renderGroups();
 const saved=store.read("layout");
